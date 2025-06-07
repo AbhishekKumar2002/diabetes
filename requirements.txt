@@ -4,4 +4,4 @@ pydantic
 lightgbm
 scikit-learn
 python-multipart
-pickle
+
