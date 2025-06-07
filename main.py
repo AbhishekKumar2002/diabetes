@@ -1,61 +1,37 @@
+from flask import Flask, request, jsonify
 import pickle
-import os
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from fastapi.middleware.cors import CORSMiddleware
+from flask_cors import CORS
 
-app = FastAPI()
+app = Flask(__name__)
+CORS(app)  # allow cross-origin requests from Next.js frontend
 
-# CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Change this in production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Load the model
+with open("diabetes.sav", "rb") as f:
+    diabetes_model = pickle.load(f)
 
-# Load model
-MODEL_PATH = "model.sav"
+@app.route("/")
+def home():
+    return "Diabetes Prediction API Running"
 
-if not os.path.exists(MODEL_PATH):
-    raise FileNotFoundError(f"Model file not found at: {MODEL_PATH}")
+@app.route("/predict", methods=["POST"])
+def predict():
+    data = request.get_json()
 
-with open(MODEL_PATH, "rb") as f:
-    model = pickle.load(f)
-
-# Input model
-class InputData(BaseModel):
-    pregnancies: int
-    glucose: int
-    bloodpressure: int
-    skinthickness: int
-    insulin: int
-    bmi: float
-    diabetespedigreefunction: float
-    age: int
-
-# Root
-@app.get("/")
-def read_root():
-    return {"message": "Diabetes prediction API is running!"}
-
-# Predict route
-@app.post("/predict")
-def predict(data: InputData):
     try:
-        features = [[
-            data.pregnancies,
-            data.glucose,
-            data.bloodpressure,
-            data.skinthickness,
-            data.insulin,
-            data.bmi,
-            data.diabetespedigreefunction,
-            data.age
-        ]]
-        prediction = model.predict(features)
-        result = int(prediction[0])
-        return {"prediction": result}
+        features = [
+            float(data['pregnancies']),
+            float(data['glucose']),
+            float(data['bloodpressure']),
+            float(data['skin']),
+            float(data['insulin']),
+            float(data['bmi']),
+            float(data['diabetespedigree']),
+            float(data['age']),
+        ]
+        prediction = diabetes_model.predict([features])[0]
+        return jsonify({"result": int(prediction)})
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return jsonify({"error": str(e)}), 400
+
+if __name__ == "__main__":
+    app.run(debug=True)
