@@ -1,7 +1,3 @@
-fastapi
-uvicorn
-pydantic
-lightgbm
+Flask
+flask-cors
 scikit-learn
-python-multipart
-
