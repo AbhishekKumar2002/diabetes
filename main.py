@@ -1,57 +1,61 @@
 import pickle
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-import requests
 import os
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-# Enable CORS (adjust origin in production)
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # You can replace with your actual domain
+    allow_origins=["*"],  # Change this in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Download and load model
-MODEL_URL = "https://kitish-whatsapp-bot-media.s3.ap-south-1.amazonaws.com/documentMessage_1749283919637.bin"
-MODEL_PATH = "diabetes_model.sav"
+# Load model
+MODEL_PATH = "model.sav"
 
 if not os.path.exists(MODEL_PATH):
-    with open(MODEL_PATH, "wb") as f:
-        f.write(requests.get(MODEL_URL).content)
+    raise FileNotFoundError(f"Model file not found at: {MODEL_PATH}")
 
 with open(MODEL_PATH, "rb") as f:
     model = pickle.load(f)
 
-# Define input schema
-class DiabetesInput(BaseModel):
+# Input model
+class InputData(BaseModel):
     pregnancies: int
-    glucose: float
-    bloodpressure: float
-    skin: float
-    insulin: float
+    glucose: int
+    bloodpressure: int
+    skinthickness: int
+    insulin: int
     bmi: float
-    diabetespedigree: float
+    diabetespedigreefunction: float
     age: int
 
+# Root
+@app.get("/")
+def read_root():
+    return {"message": "Diabetes prediction API is running!"}
+
+# Predict route
 @app.post("/predict")
-def predict(data: DiabetesInput):
+def predict(data: InputData):
     try:
         features = [[
             data.pregnancies,
             data.glucose,
             data.bloodpressure,
-            data.skin,
+            data.skinthickness,
             data.insulin,
             data.bmi,
-            data.diabetespedigree,
+            data.diabetespedigreefunction,
             data.age
         ]]
         prediction = model.predict(features)
-        return {"result": int(prediction[0])}
+        result = int(prediction[0])
+        return {"prediction": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
