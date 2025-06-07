@@ -1,8 +1,5 @@
 fastapi
 uvicorn
 scikit-learn
-pandas
-numpy
-lightgbm
-requests
+pydantic
 python-multipart
